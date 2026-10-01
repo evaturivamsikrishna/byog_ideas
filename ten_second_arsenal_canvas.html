@@ -3,114 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>10-Second Arsenal - Pitch Canvas</title>
+    <title>Playable Prototype: 10-Second Arsenal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .crt-overlay {
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 3px 100%;
-            pointer-events: none;
-        }
-        .neon-text-red { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00de, 0 0 30px #ff00de; }
-        .neon-text-cyan { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #00ffff, 0 0 30px #00ffff; }
-        .neon-box-yellow { box-shadow: 0 0 10px #eab308, inset 0 0 10px #eab308; }
-        .glitch-anim { animation: glitch 1s linear infinite; }
-        @keyframes glitch {
-            2%, 64% { transform: translate(2px,0) skew(0deg); }
-            4%, 60% { transform: translate(-2px,0) skew(0deg); }
-            62% { transform: translate(0,0) skew(5deg); }
-        }
+        body { margin: 0; overflow: hidden; background-color: #0a0a0a; color: white; font-family: monospace; }
+        canvas { display: block; margin: 0 auto; box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); border: 2px solid #1f2937; cursor: crosshair; }
+        .crt-scanlines { position: absolute; inset: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none; z-index: 50; }
+        .hud { position: absolute; pointer-events: none; }
     </style>
 </head>
-<body class="bg-black flex items-center justify-center min-h-screen p-8 font-sans">
+<body class="flex flex-col items-center justify-center min-h-screen p-4 relative">
 
-    <!-- 16:9 Canvas Container -->
-    <div class="aspect-video w-full max-w-6xl bg-gray-950 rounded-2xl shadow-2xl overflow-hidden relative flex flex-col border-2 border-pink-500/30">
+    <div class="mb-4 text-center z-10 relative">
+        <h1 class="text-3xl font-bold text-cyan-400 mb-1 tracking-widest">TEMP-OPS PROTO<span class="text-pink-500 animate-pulse">_</span></h1>
+        <p class="text-slate-400 text-sm">WASD to Move | Mouse to Aim | Click to Shoot</p>
+        <p class="text-yellow-400 text-xs mt-1">Pick up the yellow crate. You have 10 seconds of power.</p>
+    </div>
+
+    <div class="relative w-full max-w-4xl aspect-video bg-[#111]">
+        <div class="crt-scanlines"></div>
+        <canvas id="gameCanvas"></canvas>
         
-        <!-- CRT Overlay -->
-        <div class="absolute inset-0 crt-overlay z-50"></div>
-
-        <!-- Header -->
-        <header class="h-20 px-8 border-b-2 border-gray-800 flex justify-between items-center bg-black relative z-10">
-            <div>
-                <h1 class="text-3xl font-black italic tracking-widest text-white neon-text-red">TEMP-OPS: 10 SECONDS</h1>
-            </div>
-            <div class="px-4 py-1 bg-yellow-400 text-black font-black text-sm uppercase transform -skew-x-12">
-                Theme: Everything is Temporary
-            </div>
-        </header>
-
-        <!-- Main Content -->
-        <div class="flex-1 flex p-6 gap-6 relative z-10">
-            
-            <!-- Sidebar: Mechanics -->
-            <div class="w-1/3 flex flex-col gap-4 text-white">
-                <div class="bg-gray-900/80 p-5 rounded-lg border border-pink-500/20 h-full flex flex-col">
-                    <h2 class="text-xl font-bold text-cyan-400 mb-4 uppercase tracking-wider border-b border-gray-700 pb-2">The Gimmick</h2>
-                    <p class="text-sm text-gray-300 leading-relaxed mb-6">
-                        A chaotic, top-down twin-stick shooter where your weapons are devastating but violently unstable. The moment you equip a weapon, a strict 10-second timer begins.
-                    </p>
-                    
-                    <h2 class="text-lg font-bold text-pink-400 mb-2 uppercase tracking-wider">Mechanics</h2>
-                    <ul class="text-sm text-gray-300 space-y-4">
-                        <li class="bg-gray-800 p-2 rounded border-l-4 border-yellow-400">
-                            <strong>Use It or Lose It:</strong> Weapons disintegrate in your hands. Throw them at enemies right before they explode for bonus damage.
-                        </li>
-                        <li class="bg-gray-800 p-2 rounded border-l-4 border-cyan-400">
-                            <strong>Constant Scramble:</strong> The arena drops random, temporary loot. You can never get comfortable with one playstyle.
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Main: Visual Mockup -->
-            <div class="w-2/3 bg-[#0a0a0c] rounded-lg border-2 border-gray-800 relative overflow-hidden flex items-center justify-center">
-                
-                <!-- Floor Grid -->
-                <div class="absolute inset-0" style="background-image: radial-gradient(circle at center, #1a1a24 0%, #000 100%);">
-                    <div class="w-full h-full opacity-20" style="background-image: linear-gradient(#333 1px, transparent 1px), linear-gradient(90deg, #333 1px, transparent 1px); background-size: 50px 50px;"></div>
-                </div>
-
-                <!-- Player -->
-                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div class="relative flex items-center justify-center">
-                        <div class="w-8 h-8 bg-cyan-400 rounded-full shadow-[0_0_15px_#00ffff]"></div>
-                        <!-- Weapon attached -->
-                        <div class="absolute left-6 w-12 h-3 bg-white rounded-sm shadow-[0_0_10px_#fff] transform rotate-45 origin-left"></div>
-                        <!-- Player Timer -->
-                        <div class="absolute -top-8 text-xl font-black text-white neon-text-red">03.4s</div>
-                    </div>
-                </div>
-
-                <!-- Projectiles -->
-                <div class="absolute top-[40%] left-[60%] w-16 h-1 bg-cyan-200 shadow-[0_0_10px_#00ffff] transform rotate-45 z-10"></div>
-                <div class="absolute top-[35%] left-[65%] w-16 h-1 bg-cyan-200 shadow-[0_0_10px_#00ffff] transform rotate-45 z-10"></div>
-
-                <!-- Enemies -->
-                <div class="absolute top-1/4 left-3/4 w-8 h-8 border-2 border-red-500 bg-red-500/20 transform rotate-45 flex items-center justify-center z-10">
-                    <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                </div>
-                <div class="absolute bottom-1/4 left-1/4 w-8 h-8 border-2 border-red-500 bg-red-500/20 transform rotate-12 flex items-center justify-center z-10">
-                    <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                </div>
-
-                <!-- Weapon Drops on floor -->
-                <div class="absolute bottom-1/3 right-1/4 w-10 h-10 neon-box-yellow rounded bg-yellow-900/40 flex items-center justify-center z-10">
-                    <span class="text-xs font-bold text-yellow-400 glitch-anim">LASER</span>
-                    <div class="absolute -top-5 text-xs text-white">10s</div>
-                </div>
-
-                <!-- HUD -->
-                <div class="absolute top-4 left-4 text-cyan-400 font-mono text-xl font-bold">SCORE: 14,050</div>
-                <div class="absolute top-4 right-4 text-pink-500 font-mono text-xl font-bold">MULTIPLIER: x4</div>
-                
-                <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-64 h-2 bg-gray-800 rounded-full overflow-hidden border border-gray-600">
-                    <div class="w-[34%] h-full bg-red-500 shadow-[0_0_10px_#ef4444]"></div>
-                </div>
-                <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-mono text-gray-400">WEAPON DURABILITY</div>
-            </div>
-
+        <div class="hud top-4 left-4 text-cyan-400 text-xl font-bold z-20">SCORE: <span id="scoreUI">0</span></div>
+        <div class="hud top-4 right-4 text-pink-500 text-xl font-bold z-20">TIME SURVIVED: <span id="timeUI">0</span>s</div>
+        
+        <div id="gameOverUI" class="absolute inset-0 hidden bg-black/80 flex flex-col items-center justify-center z-40">
+            <h2 class="text-4xl font-black text-red-500 mb-2">NEUTRALIZED</h2>
+            <p class="text-white mb-6">Final Score: <span id="finalScore">0</span></p>
+            <button id="restartBtn" class="pointer-events-auto px-6 py-2 border-2 border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-black font-bold transition">REBOOT SEQUENCE</button>
         </div>
     </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreUI = document.getElementById('scoreUI');
+        const timeUI = document.getElementById('timeUI');
+        
+        let gameState = 'playing';
+        let lastTime = 0;
+        let score = 0;
+        let timeSurvived = 0;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const keys = { w: false, a: false, s: false, d: false };
+        const mouse = { x: canvas.width/2, y: canvas.height/2, down: false };
+
+        window.addEventListener('keydown', e => {
+            if(e.key.toLowerCase() === 'w') keys.w = true;
+            if(e.key.toLowerCase() === 'a') keys.a = true;
+            if(e.key.toLowerCase() === 's') keys.s = true;
+            if(e.key.toLowerCase() === 'd') keys.d = true;
+        });
+        window.addEventListener('keyup', e => {
+            if(e.key.toLowerCase() === 'w') keys.w = false;
+            if(e.key.toLowerCase() === 'a') keys.a = false;
+            if(e.key.toLowerCase() === 's') keys.s = false;
+            if(e.key.toLowerCase() === 'd') keys.d = false;
+        });
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', () => mouse.down = true);
+        canvas.addEventListener('mouseup', () => mouse.down = false);
+
+        let player = { x: 0, y: 0, radius: 15, speed: 250, hasWeapon: false, weaponTimer: 0, shootCooldown: 0 };
+        let bullets = [];
+        let enemies = [];
+        let pickups = [];
+        let enemySpawnTimer = 0;
+        let particles = [];
+
+        function initGame() {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.hasWeapon = false;
+            player.weaponTimer = 0;
+            bullets = [];
+            enemies = [];
+            pickups = [];
+            particles = [];
+            score = 0;
+            timeSurvived = 0;
+            gameState = 'playing';
+            document.getElementById('gameOverUI').classList.add('hidden');
+            
+            // Spawn initial weapon drop
+            spawnPickup();
+        }
+
+        function spawnPickup() {
+            pickups.push({
+                x: Math.random() * (canvas.width - 100) + 50,
+                y: Math.random() * (canvas.height - 100) + 50,
+                radius: 12
+            });
+        }
+
+        function update(dt) {
+            timeSurvived += dt;
+            timeUI.innerText = Math.floor(timeSurvived);
+
+            // Player Movement
+            let dx = 0, dy = 0;
+            if(keys.w) dy -= 1;
+            if(keys.s) dy += 1;
+            if(keys.a) dx -= 1;
+            if(keys.d) dx += 1;
+            
+            // Normalize diagonal speed
+            if(dx !== 0 && dy !== 0) {
+                const length = Math.sqrt(dx*dx + dy*dy);
+                dx /= length; dy /= length;
+            }
+            
+            player.x += dx * player.speed * dt;
+            player.y += dy * player.speed * dt;
+
+            // Constrain to canvas
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+            // Temporary Weapon Logic
+            if(player.hasWeapon) {
+                player.weaponTimer -= dt;
+                if(player.weaponTimer <= 0) {
+                    player.hasWeapon = false;
+                    // Screen shake or particle effect on break
+                    for(let i=0; i<15; i++) createParticle(player.x, player.y, '#eab308');
+                    setTimeout(spawnPickup, 2000); // Spawn new weapon after a delay
+                }
+
+                // Shooting
+                if(player.shootCooldown > 0) player.shootCooldown -= dt;
+                if(mouse.down && player.shootCooldown <= 0) {
+                    const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+                    bullets.push({
+                        x: player.x, y: player.y,
+                        vx: Math.cos(angle) * 800, vy: Math.sin(angle) * 800,
+                        life: 1.5
+                    });
+                    player.shootCooldown = 0.1; // Rate of fire
+                }
+            }
+
+            // Pickup Collision
+            for(let i = pickups.length - 1; i >= 0; i--) {
+                const p = pickups[i];
+                const dist = Math.hypot(player.x - p.x, player.y - p.y);
+                if(dist < player.radius + p.radius) {
+                    player.hasWeapon = true;
+                    player.weaponTimer = 10.0;
+                    pickups.splice(i, 1);
+                    for(let j=0; j<10; j++) createParticle(player.x, player.y, '#00ffff');
+                }
+            }
+
+            // Bullets
+            for(let i = bullets.length - 1; i >= 0; i--) {
+                const b = bullets[i];
+                b.x += b.vx * dt;
+                b.y += b.vy * dt;
+                b.life -= dt;
+                if(b.life <= 0) bullets.splice(i, 1);
+            }
+
+            // Enemies
+            enemySpawnTimer -= dt;
+            if(enemySpawnTimer <= 0) {
+                // Spawn enemy on edge
+                let ex, ey;
+                if(Math.random() > 0.5) {
+                    ex = Math.random() > 0.5 ? 0 : canvas.width;
+                    ey = Math.random() * canvas.height;
+                } else {
+                    ex = Math.random() * canvas.width;
+                    ey = Math.random() > 0.5 ? 0 : canvas.height;
+                }
+                enemies.push({ x: ex, y: ey, radius: 12, speed: 100 + Math.random() * 50 });
+                enemySpawnTimer = Math.max(0.5, 2.0 - (timeSurvived * 0.02)); // Gets harder
+            }
+
+            for(let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                const angle = Math.atan2(player.y - e.y, player.x - e.x);
+                e.x += Math.cos(angle) * e.speed * dt;
+                e.y += Math.sin(angle) * e.speed * dt;
+
+                // Player collision (Death)
+                if(Math.hypot(player.x - e.x, player.y - e.y) < player.radius + e.radius) {
+                    gameState = 'gameover';
+                    document.getElementById('finalScore').innerText = score;
+                    document.getElementById('gameOverUI').classList.remove('hidden');
+                }
+
+                // Bullet collision
+                for(let j = bullets.length - 1; j >= 0; j--) {
+                    const b = bullets[j];
+                    if(Math.hypot(b.x - e.x, b.y - e.y) < e.radius + 5) {
+                        for(let k=0; k<5; k++) createParticle(e.x, e.y, '#ef4444');
+                        enemies.splice(i, 1);
+                        bullets.splice(j, 1);
+                        score += 10;
+                        scoreUI.innerText = score;
+                        break;
+                    }
+                }
+            }
+
+            // Particles
+            for(let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function createParticle(x, y, color) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 200 + 50;
+            particles.push({
+                x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+                life: Math.random() * 0.5 + 0.2, color
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            for(let x=0; x<canvas.width; x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+            for(let y=0; y<canvas.height; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+
+            // Pickups
+            pickups.forEach(p => {
+                ctx.shadowBlur = 15; ctx.shadowColor = '#eab308';
+                ctx.fillStyle = '#eab308';
+                ctx.fillRect(p.x - p.radius, p.y - p.radius, p.radius*2, p.radius*2);
+                ctx.fillStyle = 'black';
+                ctx.font = '10px monospace';
+                ctx.fillText("10s", p.x - 8, p.y + 3);
+            });
+            ctx.shadowBlur = 0;
+
+            // Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life * 2;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Bullets
+            ctx.fillStyle = '#00ffff';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#00ffff';
+            bullets.forEach(b => {
+                ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.shadowBlur = 0;
+
+            // Enemies
+            ctx.fillStyle = '#ef4444';
+            enemies.forEach(e => {
+                ctx.beginPath();
+                ctx.rect(e.x - e.radius, e.y - e.radius, e.radius*2, e.radius*2);
+                ctx.fill();
+            });
+
+            // Player
+            const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(angle);
+            
+            ctx.shadowBlur = 15; ctx.shadowColor = '#00ffff';
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI*2); ctx.fill();
+            
+            // Draw gun if has weapon
+            if(player.hasWeapon) {
+                ctx.fillStyle = 'white';
+                ctx.fillRect(player.radius, -4, 15, 8);
+            }
+            
+            ctx.restore();
+            ctx.shadowBlur = 0;
+
+            // HUD: Weapon Timer Above Player
+            if(player.hasWeapon) {
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                // Flashing red when low
+                if(player.weaponTimer < 3) ctx.fillStyle = Math.floor(player.weaponTimer * 10) % 2 === 0 ? 'red' : 'white';
+                ctx.fillText(player.weaponTimer.toFixed(1) + "s", player.x, player.y - 25);
+                ctx.textAlign = 'left'; // reset
+            }
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            if(gameState === 'playing') {
+                update(Math.min(dt, 0.1));
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.getElementById('restartBtn').addEventListener('click', initGame);
+
+        window.onload = () => {
+            initGame();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
 </body>
 </html>
