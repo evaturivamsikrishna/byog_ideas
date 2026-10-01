@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playable Prototype: Fading Platformer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+        canvas { display: block; margin: 0 auto; box-shadow: 0 0 30px rgba(168, 85, 247, 0.2); border-radius: 12px; border: 1px solid #334155; }
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4">
+    <a href="index.html" class="mb-2 text-purple-400/80 text-sm hover:text-purple-300">← All games</a>
+    <div class="mb-4 text-center">
+        <h1 class="text-3xl font-bold text-purple-400 mb-1">Ephemeral Steps: Prototype</h1>
+        <p class="text-slate-400 text-sm">Arrows / A D to Move | Up / W / Space to Jump</p>
+        <p class="text-pink-400 text-xs mt-1 font-mono">Platforms decay 1.5s after touch!</p>
+    </div>
+
+    <div class="relative w-full max-w-4xl aspect-video">
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameOverUI" class="ui-layer hidden bg-slate-950/80 backdrop-blur-sm rounded-xl">
+            <h2 class="text-4xl font-black text-white mb-2">YOU FELL</h2>
+            <button id="restartBtn" class="pointer-events-auto px-6 py-2 bg-purple-600 hover:bg-purple-500 rounded-full font-bold transition">Try Again</button>
+        </div>
+        <div id="winUI" class="ui-layer hidden bg-slate-950/80 backdrop-blur-sm rounded-xl">
+            <h2 class="text-4xl font-black text-pink-400 mb-2">PROTOTYPE CLEARED</h2>
+            <button id="nextLevelBtn" class="pointer-events-auto px-6 py-2 bg-pink-600 hover:bg-pink-500 rounded-full font-bold transition">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverUI = document.getElementById('gameOverUI');
+        const winUI = document.getElementById('winUI');
+        
+        let gameState = 'playing'; // playing, gameover, win
+        let lastTime = 0;
+
+        // Resize canvas to fit container while maintaining aspect ratio
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const keys = { right: false, left: false, up: false };
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+                if(player.grounded) {
+                    player.vy = player.jumpForce;
+                    player.grounded = false;
+                }
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+        });
+
+        const player = {
+            x: 50, y: 100, width: 24, height: 32,
+            vx: 0, vy: 0, speed: 300, jumpForce: -600,
+            gravity: 1200, maxFall: 800, grounded: false,
+            color: '#e879f9'
+        };
+
+        let platforms = [];
+        let goal = { x: 0, y: 0, width: 40, height: 60 };
+
+        function loadLevel() {
+            // Dynamic scaling based on standard 800x450 resolution
+            const sx = canvas.width / 800;
+            const sy = canvas.height / 450;
+            
+            player.x = 50 * sx;
+            player.y = 100 * sy;
+            player.vx = 0;
+            player.vy = 0;
+
+            platforms = [
+                // Start platform (safe)
+                { x: 30 * sx, y: 350 * sy, w: 100 * sx, h: 20 * sy, state: 'solid', type: 'safe' },
+                // Temporary platforms
+                { x: 180 * sx, y: 300 * sy, w: 80 * sx, h: 20 * sy, state: 'solid', type: 'temp', timer: 1.5, maxTimer: 1.5 },
+                { x: 320 * sx, y: 250 * sy, w: 80 * sx, h: 20 * sy, state: 'solid', type: 'temp', timer: 1.5, maxTimer: 1.5 },
+                { x: 460 * sx, y: 200 * sy, w: 60 * sx, h: 20 * sy, state: 'solid', type: 'temp', timer: 1.2, maxTimer: 1.2 },
+                { x: 600 * sx, y: 150 * sy, w: 50 * sx, h: 20 * sy, state: 'solid', type: 'temp', timer: 1.0, maxTimer: 1.0 },
+                // Goal platform
+                { x: 720 * sx, y: 150 * sy, w: 80 * sx, h: 20 * sy, state: 'solid', type: 'safe' }
+            ];
+
+            goal = { x: 740 * sx, y: 90 * sy, width: 40 * sx, height: 60 * sy };
+            
+            gameState = 'playing';
+            gameOverUI.classList.add('hidden');
+            winUI.classList.add('hidden');
+        }
+
+        function updatePhysics(dt) {
+            // Horizontal movement
+            if (keys.right) player.vx = player.speed;
+            else if (keys.left) player.vx = -player.speed;
+            else player.vx = 0;
+
+            player.x += player.vx * dt;
+
+            // Apply gravity
+            player.vy += player.gravity * dt;
+            if (player.vy > player.maxFall) player.vy = player.maxFall;
+            player.y += player.vy * dt;
+
+            // Collision with boundaries
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+            // Collision with platforms
+            player.grounded = false;
+            platforms.forEach(p => {
+                if (p.state === 'broken') return;
+
+                // AABB Collision
+                if (player.x < p.x + p.w &&
+                    player.x + player.width > p.x &&
+                    player.y + player.height > p.y &&
+                    player.y < p.y + p.h) {
+                    
+                    // Top collision (falling down onto platform)
+                    if (player.vy > 0 && player.y + player.height - player.vy * dt <= p.y + 5) {
+                        player.y = p.y - player.height;
+                        player.vy = 0;
+                        player.grounded = true;
+                        
+                        // Trigger decay mechanic
+                        if (p.type === 'temp' && p.state === 'solid') {
+                            p.state = 'decaying';
+                        }
+                    }
+                }
+            });
+
+            // Death condition
+            if (player.y > canvas.height) {
+                gameState = 'gameover';
+                gameOverUI.classList.remove('hidden');
+            }
+
+            // Win condition (Touch Goal)
+            if (player.x < goal.x + goal.width && player.x + player.width > goal.x &&
+                player.y < goal.y + goal.height && player.y + player.height > goal.y) {
+                gameState = 'win';
+                winUI.classList.remove('hidden');
+            }
+        }
+
+        function updatePlatforms(dt) {
+            platforms.forEach(p => {
+                if (p.state === 'decaying') {
+                    p.timer -= dt;
+                    if (p.timer <= 0) {
+                        p.state = 'broken';
+                        // Optional: Respawn platform after some time to avoid soft-locks in prototype
+                        setTimeout(() => { p.state = 'solid'; p.timer = p.maxTimer; }, 3000);
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            // Background
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#1e1b4b');
+            bgGrad.addColorStop(1, '#4c1d95');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Goal
+            ctx.fillStyle = 'rgba(236, 72, 153, 0.3)';
+            ctx.fillRect(goal.x, goal.y, goal.width, goal.height);
+            ctx.fillStyle = '#ec4899';
+            ctx.fillRect(goal.x + 10, goal.y + 20, goal.width - 20, goal.height - 40);
+            
+            // Platforms
+            platforms.forEach(p => {
+                if (p.state === 'broken') return;
+
+                if (p.type === 'safe') {
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                } else if (p.type === 'temp') {
+                    // Visual feedback for decay
+                    let alpha = p.state === 'decaying' ? p.timer / p.maxTimer : 1;
+                    
+                    // Shake effect if decaying
+                    let shakeX = 0;
+                    if (p.state === 'decaying') {
+                        shakeX = (Math.random() - 0.5) * (4 * (1 - alpha));
+                    }
+
+                    ctx.fillStyle = `rgba(167, 139, 250, ${alpha})`;
+                    ctx.fillRect(p.x + shakeX, p.y, p.w, p.h);
+                    
+                    // Progress bar
+                    if (p.state === 'decaying') {
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(p.x + shakeX, p.y + p.h - 4, p.w * alpha, 4);
+                    }
+                }
+            });
+
+            // Player
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = player.color;
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.shadowBlur = 0; // Reset
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 1000; // Delta time in seconds
+            lastTime = timestamp;
+
+            if (gameState === 'playing') {
+                updatePhysics(Math.min(dt, 0.1)); // Cap dt to prevent tunneling
+                updatePlatforms(Math.min(dt, 0.1));
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Setup Events
+        document.getElementById('restartBtn').addEventListener('click', loadLevel);
+        document.getElementById('nextLevelBtn').addEventListener('click', loadLevel);
+
+        // Start
+        window.onload = () => {
+            loadLevel();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shifting Tower Defense</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background: #0c0a09; color: #fef3c7; font-family: system-ui, sans-serif; }
+        canvas { display: block; margin: 0 auto; border: 1px solid #44403c; border-radius: 8px; cursor: crosshair; }
+        .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4 gap-3">
+    <a href="index.html" class="text-amber-500/80 text-sm hover:text-amber-400">← All games</a>
+    <p class="text-center text-sm text-stone-400">Click empty tiles to build towers (30 scrap). Towers rust in ~30s. Path shifts every wave.</p>
+    <div class="relative w-full max-w-4xl aspect-video">
+        <canvas id="c"></canvas>
+        <div id="over" class="overlay hidden rounded-lg">
+            <h2 class="text-3xl font-black text-red-500 mb-2">BASE BREACHED</h2>
+            <p class="mb-4">Wave <span id="finalWave">0</span> · Scrap <span id="finalScrap">0</span></p>
+            <button id="restart" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-bold text-black">Rebuild</button>
+        </div>
+    </div>
+    <script>
+        const CFG = {
+            cols: 14, rows: 8,
+            towerCost: 30, towerLife: 30, towerRange: 72, towerFireRate: 0.45, towerDamage: 28,
+            enemyHp: 50, enemySpeed: 48, startScrap: 60, maxLives: 15,
+            enemiesPerWave: 6, waveGap: 4
+        };
+
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        let lastTime = 0, gameState = 'play';
+        let scrap = CFG.startScrap, lives = CFG.maxLives, wave = 1;
+        let towers = [], enemies = [], shots = [];
+        let pathCells = new Set();
+        let waypoints = [];
+        let waveTimer = 2, spawnLeft = 0, spawnCooldown = 0, pathVariant = 0;
+
+        function resize() {
+            const box = canvas.parentElement;
+            canvas.width = box.clientWidth;
+            canvas.height = box.clientHeight;
+            buildPath(pathVariant);
+        }
+        window.addEventListener('resize', resize);
+
+        function cellSize() {
+            return { w: canvas.width / CFG.cols, h: canvas.height / CFG.rows };
+        }
+
+        function buildPath(variant) {
+            pathCells = new Set();
+            const routes = [
+                [[0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[6,2],[6,1],[7,1],[8,1],[9,1],[10,1],[11,1],[12,1],[13,1]],
+                [[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[6,5],[6,4],[6,3],[7,3],[8,3],[9,3],[10,3],[11,3],[12,3],[13,3]],
+                [[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[5,2],[5,3],[5,4],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5],[11,5],[12,5],[13,5]]
+            ];
+            const route = routes[variant % routes.length];
+            route.forEach(([c, r]) => pathCells.add(`${c},${r}`));
+            const { w, h } = cellSize();
+            waypoints = route.map(([c, r]) => ({ x: (c + 0.5) * w, y: (r + 0.5) * h }));
+        }
+
+        function init() {
+            scrap = CFG.startScrap;
+            lives = CFG.maxLives;
+            wave = 1;
+            towers = [];
+            enemies = [];
+            shots = [];
+            waveTimer = 2;
+            spawnLeft = CFG.enemiesPerWave;
+            spawnCooldown = 0;
+            pathVariant = 0;
+            gameState = 'play';
+            document.getElementById('over').classList.add('hidden');
+            resize();
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (gameState !== 'play') return;
+            const rect = canvas.getBoundingClientRect();
+            const { w, h } = cellSize();
+            const col = Math.floor((e.clientX - rect.left) / w);
+            const row = Math.floor((e.clientY - rect.top) / h);
+            const key = `${col},${row}`;
+            if (pathCells.has(key)) return;
+            if (scrap < CFG.towerCost) return;
+            if (towers.some(t => t.col === col && t.row === row)) return;
+            scrap -= CFG.towerCost;
+            towers.push({ col, row, life: CFG.towerLife, cooldown: 0 });
+        });
+
+        function spawnEnemy() {
+            enemies.push({ wp: 0, x: waypoints[0].x, y: waypoints[0].y, hp: CFG.enemyHp + wave * 4 });
+        }
+
+        function update(dt) {
+            if (waveTimer > 0) {
+                waveTimer -= dt;
+                return;
+            }
+            if (spawnLeft > 0) {
+                spawnCooldown -= dt;
+                if (spawnCooldown <= 0) {
+                    spawnEnemy();
+                    spawnLeft--;
+                    spawnCooldown = 0.55;
+                }
+            } else if (enemies.length === 0) {
+                wave++;
+                pathVariant++;
+                buildPath(pathVariant);
+                towers = towers.filter(t => t.life > 0);
+                spawnLeft = CFG.enemiesPerWave + Math.floor(wave * 0.5);
+                waveTimer = CFG.waveGap;
+            }
+
+            for (let i = towers.length - 1; i >= 0; i--) {
+                towers[i].life -= dt;
+                if (towers[i].life <= 0) towers.splice(i, 1);
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                const target = waypoints[e.wp + 1] || waypoints[waypoints.length - 1];
+                const dx = target.x - e.x, dy = target.y - e.y;
+                const dist = Math.hypot(dx, dy);
+                const spd = (CFG.enemySpeed + wave * 2) * dt;
+                if (dist <= spd) {
+                    e.x = target.x; e.y = target.y;
+                    e.wp++;
+                    if (e.wp >= waypoints.length - 1) {
+                        enemies.splice(i, 1);
+                        lives--;
+                        if (lives <= 0) endGame();
+                    }
+                } else {
+                    e.x += (dx / dist) * spd;
+                    e.y += (dy / dist) * spd;
+                }
+            }
+
+            const { w, h } = cellSize();
+            towers.forEach(t => {
+                t.cooldown -= dt;
+                const tx = (t.col + 0.5) * w, ty = (t.row + 0.5) * h;
+                let nearest = null, best = CFG.towerRange;
+                enemies.forEach(e => {
+                    const d = Math.hypot(e.x - tx, e.y - ty);
+                    if (d < best) { best = d; nearest = e; }
+                });
+                if (nearest && t.cooldown <= 0) {
+                    t.cooldown = CFG.towerFireRate;
+                    shots.push({ x: tx, y: ty, tx: nearest.x, ty: nearest.y, life: 0.12, target: nearest });
+                }
+            });
+
+            for (let i = shots.length - 1; i >= 0; i--) {
+                const s = shots[i];
+                s.life -= dt;
+                if (s.life <= 0) {
+                    if (enemies.includes(s.target)) {
+                        s.target.hp -= CFG.towerDamage;
+                        if (s.target.hp <= 0) {
+                            const idx = enemies.indexOf(s.target);
+                            if (idx >= 0) {
+                                enemies.splice(idx, 1);
+                                scrap += 8;
+                            }
+                        }
+                    }
+                    shots.splice(i, 1);
+                }
+            }
+        }
+
+        function endGame() {
+            gameState = 'over';
+            document.getElementById('finalWave').textContent = wave;
+            document.getElementById('finalScrap').textContent = scrap;
+            document.getElementById('over').classList.remove('hidden');
+        }
+
+        function draw() {
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const { w, h } = cellSize();
+
+            for (let c = 0; c < CFG.cols; c++) {
+                for (let r = 0; r < CFG.rows; r++) {
+                    const x = c * w, y = r * h;
+                    if (pathCells.has(`${c},${r}`)) {
+                        ctx.fillStyle = 'rgba(180, 83, 9, 0.35)';
+                        ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+                    } else {
+                        ctx.fillStyle = 'rgba(41, 37, 36, 0.8)';
+                        ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+                    }
+                }
+            }
+
+            ctx.fillStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.arc(waypoints[0].x, waypoints[0].y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ef4444';
+            const end = waypoints[waypoints.length - 1];
+            ctx.fillRect(end.x - 10, end.y - 10, 20, 20);
+
+            towers.forEach(t => {
+                const x = (t.col + 0.5) * w, y = (t.row + 0.5) * h;
+                const rust = t.life / CFG.towerLife;
+                ctx.fillStyle = `rgb(${Math.floor(120 + 100 * rust)}, ${Math.floor(60 * rust)}, 40)`;
+                ctx.beginPath();
+                ctx.arc(x, y, Math.min(w, h) * 0.28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, Math.min(w, h) * 0.28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * rust);
+                ctx.stroke();
+            });
+
+            enemies.forEach(e => {
+                ctx.fillStyle = '#fca5a5';
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, 9, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            shots.forEach(s => {
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.tx, s.ty);
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = '#fef3c7';
+            ctx.font = 'bold 14px system-ui';
+            ctx.fillText(`Wave ${wave}  ·  Lives ${lives}  ·  Scrap ${scrap}`, 10, 22);
+            if (waveTimer > 0) {
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillText(`Path shifting… next wave in ${waveTimer.toFixed(1)}s`, 10, 42);
+            }
+        }
+
+        function loop(ts) {
+            if (!lastTime) lastTime = ts;
+            const dt = Math.min((ts - lastTime) / 1000, 0.1);
+            lastTime = ts;
+            if (gameState === 'play') update(dt);
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.getElementById('restart').addEventListener('click', init);
+        init();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
