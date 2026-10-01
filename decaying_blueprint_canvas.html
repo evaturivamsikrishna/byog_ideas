@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decaying Blueprint - Pitch Canvas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .blueprint-bg {
+            background-color: #0b345c;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+            background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+        }
+        
+        .fade-mask {
+            -webkit-mask-image: linear-gradient(to right, black 30%, transparent 80%);
+            mask-image: linear-gradient(to right, black 30%, transparent 80%);
+        }
+
+        .sketch-border {
+            border: 2px solid white;
+            border-radius: 2px 255px 3px 25px / 255px 5px 225px 3px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center min-h-screen p-8 font-mono">
+
+    <!-- 16:9 Canvas Container -->
+    <div class="aspect-video w-full max-w-6xl bg-blue-950 rounded-2xl shadow-2xl overflow-hidden flex flex-col border-4 border-white/10 text-white">
+        
+        <!-- Header -->
+        <header class="h-20 px-8 border-b-2 border-white/20 flex justify-between items-center blueprint-bg">
+            <div>
+                <h1 class="text-3xl font-bold tracking-widest text-white uppercase">Project: Erasure</h1>
+                <p class="text-xs text-blue-200 mt-1 opacity-70">CONFIDENTIAL BLUEPRINT PUZZLER</p>
+            </div>
+            <div class="px-4 py-1 border-2 border-white text-white font-bold text-sm transform rotate-2">
+                THEME: EVERYTHING IS TEMPORARY
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex p-6 gap-6 blueprint-bg">
+            
+            <!-- Sidebar: Mechanics -->
+            <div class="w-1/3 flex flex-col gap-4">
+                <div class="bg-blue-900/40 p-4 border border-blue-400/30 shadow-lg backdrop-blur-sm relative">
+                    <div class="absolute -top-3 -left-3 w-6 h-6 border-t-2 border-l-2 border-white"></div>
+                    <div class="absolute -bottom-3 -right-3 w-6 h-6 border-b-2 border-r-2 border-white"></div>
+                    
+                    <h2 class="text-xl font-bold text-blue-100 mb-2 uppercase">Objective</h2>
+                    <p class="text-sm text-blue-200 leading-relaxed">Study the level architecture before the blueprint degrades. Place logic gates, traps, or character paths based entirely on your short-term memory.</p>
+                </div>
+                
+                <div class="bg-blue-900/40 p-4 border border-blue-400/30 shadow-lg backdrop-blur-sm flex-1 relative mt-4">
+                    <h2 class="text-xl font-bold text-blue-100 mb-3 uppercase">Mechanics</h2>
+                    <div class="space-y-4 text-sm text-blue-200">
+                        <div>
+                            <div class="font-bold text-white mb-1">> INK DECAY</div>
+                            The level map is drawn in temporary ink. You have 10 seconds to memorize the layout before it fades to a blank grid.
+                        </div>
+                        <div>
+                            <div class="font-bold text-white mb-1">> BLIND EXECUTION</div>
+                            Once the blueprint is gone, you must place your pieces. Hitting 'Execute' runs the simulation in the dark.
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mt-8">
+                        <div class="text-xs mb-1 flex justify-between">
+                            <span>MEMORY INTEGRITY</span>
+                            <span class="text-red-400 animate-pulse">CRITICAL (32%)</span>
+                        </div>
+                        <div class="w-full h-2 border border-white/50 p-[1px]">
+                            <div class="w-[32%] h-full bg-white"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main: Visual Mockup -->
+            <div class="w-2/3 border-2 border-white/20 relative overflow-hidden flex items-center justify-center p-8 bg-blue-950/50">
+                
+                <!-- The Map / Blueprint -->
+                <div class="w-full h-full relative fade-mask">
+                    
+                    <!-- Rooms & Corridors (Sketch style) -->
+                    <div class="absolute top-10 left-10 w-32 h-32 sketch-border flex items-center justify-center bg-white/5">
+                        <span class="text-white/50 text-xs">START_NODE</span>
+                    </div>
+                    
+                    <div class="absolute top-20 left-42 w-48 h-12 sketch-border bg-white/5"></div>
+                    
+                    <div class="absolute top-10 left-[22.5rem] w-40 h-40 sketch-border flex flex-col items-center justify-center bg-white/5">
+                        <div class="w-8 h-8 rounded-full border-2 border-white border-dashed animate-spin-slow"></div>
+                        <span class="text-white/50 text-xs mt-2">TURBINE_A</span>
+                    </div>
+
+                    <!-- Fading elements on the right -->
+                    <div class="absolute top-52 left-[25rem] w-12 h-32 border-2 border-white/50 border-dashed"></div>
+                    <div class="absolute top-52 left-[30rem] w-32 h-32 border border-white/20 flex items-center justify-center">
+                        <span class="text-white/20 text-xs">EXIT_NODE</span>
+                    </div>
+
+                    <!-- Placed items by player -->
+                    <div class="absolute top-[5.5rem] left-[15rem] w-6 h-6 bg-red-500 rounded-sm shadow-[0_0_10px_red] flex items-center justify-center text-[10px] font-bold">!</div>
+                    
+                </div>
+
+                <!-- Execution Button overlay -->
+                <div class="absolute bottom-6 right-6">
+                    <button class="px-6 py-3 bg-white text-blue-900 font-bold tracking-widest hover:bg-blue-100 transition shadow-[4px_4px_0_rgba(0,0,0,0.5)]">
+                        EXECUTE SEQUENCE
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>
